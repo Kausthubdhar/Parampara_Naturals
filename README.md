@@ -1,46 +1,275 @@
-# Getting Started with Create React App
+# 🥬 Parampara Naturals - Store Management Application
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive, professional store management application designed specifically for organic stores in India. Built with React, TypeScript, and Tailwind CSS, featuring a mobile-first design approach with comprehensive business management capabilities.
 
-## Available Scripts
+## ✨ Features
 
-In the project directory, you can run:
+### 🏠 Dashboard
+- **Sales Overview**: Daily, weekly, monthly revenue charts with Recharts
+- **Key Metrics**: Total sales, orders count, top products, customer count
+- **Recent Activity**: Latest orders, low stock alerts
+- **Quick Actions**: New sale, add product, view customers buttons
+- **Analytics Charts**: Sales trends, order patterns, and performance metrics
 
-### `npm start`
+### 🛒 Sales Management
+- **New Sale Screen**: 
+  - Product search and selection with beautiful Unsplash images
+  - Manual weight entry system with real-time price calculations
+  - Shopping cart with quantity adjustments
+  - Customer information capture (name, phone, email, address)
+  - Multiple payment methods (cash, card, UPI)
+  - Receipt generation capabilities
+- **Sales History**: Complete transaction log with search and filters
+- **Receipt System**: Professional receipt generation
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 📦 Product Management
+- **Product Catalog**: Grid/list view with high-quality Unsplash images
+- **Add/Edit Products**: Name, price per kg/unit, category, stock levels, description
+- **Categories**: Organic vegetables, fruits, grains, spices, dairy, honey & jams
+- **Stock Management**: Current inventory, low stock alerts, restock reminders
+- **Price Management**: Bulk pricing and stock tracking
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### 👥 Customer Management
+- **Customer Database**: Contact details, purchase history, preferences
+- **Customer Profiles**: Individual customer pages with transaction history
+- **Loyalty Tracking**: Purchase frequency, total spending, favorite products
+- **Contact Management**: Phone, email, address storage
 
-### `npm test`
+### 💰 Analytics & Reports
+- **Sales Reports**: Daily, weekly, monthly, yearly with exportable data
+- **Product Performance**: Best sellers, slow movers, profit margins
+- **Customer Analytics**: Repeat customers, average order value, demographics
+- **Financial Reports**: Profit/loss statements, cash flow tracking
+- **Inventory Reports**: Stock levels, turnover rates, reorder points
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 📱 Mobile-First Design
+- **Bottom Navigation**: Dashboard, Sales, Products, Customers, Analytics
+- **Floating Action Button**: Quick access to new sale
+- **Responsive Cards**: Adapt beautifully to all screen sizes
+- **Touch Gestures**: Swipe actions, pull-to-refresh
+- **Offline Capability**: Local storage for critical data
 
-### `npm run build`
+## 🎨 Design System
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Color Palette
+- **Primary**: #4CAF50 (natural green)
+- **Background**: #F9F9F9 (off-white)
+- **Text**: #1A1A1A (dark grey)
+- **Accent Colors**: Warm earthy tones (#8D6E63, #FF9800)
+- **Secondary**: #F1F8E9 (light green)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Typography
+- **Font**: Inter (with system font fallbacks)
+- **Base font size**: 14px
+- **Hierarchy**: Clear typography levels for professional appearance
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Visual Style
+- Card-based layout with rounded corners (0.75rem radius)
+- Subtle shadows for depth
+- Light theme only (force disable dark mode)
+- Minimalist and clean interface
+- Touch-friendly interactions with proper spacing
 
-### `npm run eject`
+## 🚀 Technology Stack
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- **Framework**: React 18 with TypeScript
+- **Styling**: Tailwind CSS v4 with custom design tokens
+- **UI Components**: Custom components with consistent design system
+- **Icons**: Lucide React
+- **Charts**: Recharts library for data visualization
+- **Images**: Unsplash integration for product photos
+- **State Management**: React hooks (useState, useEffect)
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 📁 Project Structure
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```
+src/
+├── components/
+│   ├── Dashboard.tsx
+│   ├── MobileApp.tsx
+│   ├── Header.tsx
+│   ├── Sidebar.tsx
+│   ├── Products.tsx
+│   ├── Orders.tsx
+│   ├── Customers.tsx
+│   ├── Analytics.tsx
+│   └── mobile/
+│       ├── MobileDashboard.tsx
+│       ├── NewSaleScreen.tsx
+│       ├── InventoryScreen.tsx
+│       ├── CustomersScreen.tsx
+│       ├── AnalyticsScreen.tsx
+│       └── BottomNavigation.tsx
+├── data/
+│   └── sampleData.ts
+├── types/
+│   └── index.ts
+├── App.tsx
+└── index.css
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## 🏗️ Data Models
 
-## Learn More
+### Product
+```typescript
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  stock: number;
+  unit: 'kg' | 'piece' | 'liter';
+  image: string;
+  description?: string;
+  minStock?: number;
+}
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Customer
+```typescript
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  totalPurchases: number;
+  loyaltyPoints: number;
+  lastPurchase?: Date;
+}
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Sale
+```typescript
+interface Sale {
+  id: string;
+  date: Date;
+  customer?: Customer;
+  items: SaleItem[];
+  total: number;
+  paymentMethod: 'cash' | 'card' | 'upi';
+  status: 'completed' | 'pending' | 'cancelled';
+  tax?: number;
+  discount?: number;
+}
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 16+ 
+- npm or yarn
+
+### Installation
+1. Clone the repository
+```bash
+git clone <repository-url>
+cd parampara-naturals
+```
+
+2. Install dependencies
+```bash
+npm install
+```
+
+3. Start the development server
+```bash
+npm start
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Build for Production
+```bash
+npm run build
+```
+
+## 📱 Responsive Behavior
+
+- **Mobile-first approach**: Optimized for mobile devices
+- **Tablet optimization**: Responsive layouts for medium screens
+- **Desktop layouts**: Sidebar navigation for larger screens
+- **Touch-friendly**: Optimized buttons and interactions
+- **Image optimization**: Responsive image loading
+
+## 🎯 Business Logic
+
+### Sales Processing
+- Support for weighted products (fruits, vegetables)
+- Automatic price calculation based on weight/quantity
+- Tax calculations where applicable
+- Discount applications
+- Multiple payment method handling
+
+### Inventory Management
+- Automatic stock deduction on sales
+- Low stock alerts and notifications
+- Bulk inventory updates
+- Category-based organization
+- Search and filter capabilities
+
+### Reporting Features
+- Daily sales summaries
+- Monthly profit/loss reports
+- Customer purchase patterns
+- Product performance analytics
+- Expense categorization and tracking
+
+## 📊 Sample Data
+
+The application includes realistic sample data for:
+- **20+ organic products** with Unsplash images
+- **10+ customer records** with realistic Indian names and contact details
+- **Sample sales transactions** with various payment methods
+- **Expense categories** and entries
+- **Realistic pricing** for Indian organic store context
+
+## 🔧 Customization
+
+### Adding New Products
+1. Navigate to Products section
+2. Click "Add Product" button
+3. Fill in product details (name, price, category, stock, unit)
+4. Upload product image or use Unsplash URL
+5. Set minimum stock level for alerts
+
+### Managing Customers
+1. Go to Customers section
+2. Add new customer with contact details
+3. Track purchase history and loyalty points
+4. View customer analytics and insights
+
+### Generating Reports
+1. Access Analytics section
+2. Select time range (week/month/year)
+3. View various charts and metrics
+4. Export data for external analysis
+
+## 🌟 Key Benefits
+
+- **Professional Appearance**: Clean, trustworthy interface for business use
+- **Mobile-First**: Optimized for mobile devices used in stores
+- **Comprehensive Features**: All essential store management capabilities
+- **Indian Context**: Designed with Indian business practices in mind
+- **Easy to Use**: Intuitive interface for store staff
+- **Scalable**: Can grow with your business needs
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support and questions, please open an issue in the repository or contact the development team.
+
+---
+
+**Built with ❤️ for organic store owners in India**
