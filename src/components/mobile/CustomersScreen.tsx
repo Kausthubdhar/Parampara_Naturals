@@ -1,38 +1,56 @@
 import React, { useState } from 'react';
-import { Search, Plus, Users, Phone, Mail, MapPin, Star, TrendingUp } from 'lucide-react';
+import { Search, Plus, Users, Phone, Mail, MapPin, Star } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Customer } from '../../types';
 
 const CustomersScreen: React.FC = () => {
   const { state } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'purchases' | 'loyalty'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'purchases'>('name');
 
   const { customers, sales } = state;
 
   const filteredCustomers = customers
-    .filter(customer =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery) ||
-      customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter(customer => {
+      const fullName = customer.firstName && customer.lastName 
+        ? `${customer.firstName} ${customer.lastName}`.toLowerCase()
+        : customer.name?.toLowerCase() || '';
+      const firstName = customer.firstName?.toLowerCase() || '';
+      const lastName = customer.lastName?.toLowerCase() || '';
+      
+      return fullName.includes(searchQuery.toLowerCase()) ||
+             firstName.includes(searchQuery.toLowerCase()) ||
+             lastName.includes(searchQuery.toLowerCase()) ||
+             customer.phone.includes(searchQuery) ||
+             customer.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case 'purchases':
           return b.totalPurchases - a.totalPurchases;
-        case 'loyalty':
-          return b.loyaltyPoints - a.loyaltyPoints;
         default:
-          return a.name.localeCompare(b.name);
+          const aName = a.firstName && a.lastName 
+            ? `${a.firstName} ${a.lastName}` 
+            : a.name || '';
+          const bName = b.firstName && b.lastName 
+            ? `${b.firstName} ${b.lastName}` 
+            : b.name || '';
+          return aName.localeCompare(bName);
       }
     });
 
   const getCustomerStats = (customer: Customer) => {
     const customerSales = sales.filter(sale => sale.customer?.id === customer.id);
     const totalOrders = customerSales.length;
-    const averageOrderValue = totalOrders > 0 ? customer.totalPurchases / totalOrders : 0;
+    const totalSpent = customerSales.reduce((sum, sale) => sum + sale.total, 0);
+    const averageOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
     
-    return { totalOrders, averageOrderValue };
+    // Get the most recent purchase date
+    const lastPurchase = customerSales.length > 0 
+      ? new Date(Math.max(...customerSales.map(sale => new Date(sale.date).getTime())))
+      : null;
+    
+    return { totalOrders, totalSpent, averageOrderValue, lastPurchase };
   };
 
   return (
@@ -68,7 +86,6 @@ const CustomersScreen: React.FC = () => {
           >
             <option value="name">Name</option>
             <option value="purchases">Total Purchases</option>
-            <option value="loyalty">Loyalty Points</option>
           </select>
         </div>
       </div>
@@ -83,13 +100,13 @@ const CustomersScreen: React.FC = () => {
           </div>
           <div>
             <p className="text-2xl font-bold text-accent-orange">
-              ₹{(customers.reduce((sum, c) => sum + (c.totalPurchases || 0), 0)).toLocaleString()}
+              ₹{sales.reduce((sum, sale) => sum + sale.total, 0).toLocaleString()}
             </p>
             <p className="text-xs text-gray-600">Total Revenue</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-accent-brown">
-              {Math.round(customers.reduce((sum, c) => sum + c.totalPurchases, 0) / customers.length)}
+              {Math.round(sales.reduce((sum, sale) => sum + sale.total, 0) / customers.length)}
             </p>
             <p className="text-xs text-gray-600">Avg. Purchase</p>
           </div>
@@ -109,12 +126,6 @@ const CustomersScreen: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-text">{customer.name}</h3>
-                    <div className="flex items-center space-x-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span className="text-sm font-medium text-accent-brown">
-                        {customer.loyaltyPoints}
-                      </span>
-                    </div>
                   </div>
                   
                   <div className="space-y-1 mb-3">
@@ -138,7 +149,7 @@ const CustomersScreen: React.FC = () => {
 
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div className="bg-gray-50 rounded-lg p-2">
-                      <p className="text-lg font-bold text-primary">₹{(customer.totalPurchases || 0).toLocaleString()}</p>
+                      <p className="text-lg font-bold text-primary">₹{stats.totalSpent.toLocaleString()}</p>
                       <p className="text-xs text-gray-600">Total Spent</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2">
@@ -151,12 +162,12 @@ const CustomersScreen: React.FC = () => {
                     </div>
                   </div>
 
-                  {customer.lastPurchase && (
+                  {stats.lastPurchase && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Last Purchase:</span>
                         <span className="font-medium text-text">
-                          {new Date(customer.lastPurchase).toLocaleDateString()}
+                          {stats.lastPurchase.toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -209,7 +220,6 @@ const CustomersScreen: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-primary text-sm">₹{(customer.totalPurchases || 0).toLocaleString()}</p>
-                  <p className="text-xs text-gray-600">{customer.loyaltyPoints} pts</p>
                 </div>
               </div>
             ))}

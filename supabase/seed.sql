@@ -1,4 +1,4 @@
--- Parampara Naturals - Seed data
+-- Organica AI - Seed data
 -- Run after schema to populate minimal demo data.
 
 -- Categories
@@ -52,7 +52,6 @@ begin
   -- Update aggregates on customer
   update public.customers
     set total_purchases = coalesce(total_purchases, 0) + 260.00,
-        loyalty_points = coalesce(loyalty_points, 0) + 26,
         last_purchase = now()
   where id = v_customer;
 end $$;

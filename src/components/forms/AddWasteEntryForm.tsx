@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Save, X, Trash2, AlertTriangle, Package, Calendar, DollarSign, FileText } from 'lucide-react';
+import { Save, Trash2, AlertTriangle, Package, Calendar, DollarSign, FileText } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { Product } from '../../types';
 
 interface WasteEntry {
   id: string;

@@ -125,52 +125,55 @@ export const products: Product[] = [
 export const customers: Customer[] = [
   {
     id: '1',
+    firstName: 'Priya',
+    lastName: 'Sharma',
     name: 'Priya Sharma',
     phone: '+91 98765 43210',
     email: 'priya.sharma@email.com',
     address: '123 Green Park, Delhi',
     totalPurchases: 12500,
-    loyaltyPoints: 1250,
     lastPurchase: new Date('2024-01-15')
   },
   {
     id: '2',
-    name: 'Rajesh Kumar',
+    firstName: 'Rajesh',
+    name: 'Rajesh',
     phone: '+91 87654 32109',
     email: 'rajesh.kumar@email.com',
     address: '456 Eco Colony, Mumbai',
     totalPurchases: 8900,
-    loyaltyPoints: 890,
     lastPurchase: new Date('2024-01-14')
   },
   {
     id: '3',
+    firstName: 'Anita',
+    lastName: 'Patel',
     name: 'Anita Patel',
     phone: '+91 76543 21098',
     email: 'anita.patel@email.com',
     address: '789 Nature Lane, Bangalore',
     totalPurchases: 15600,
-    loyaltyPoints: 1560,
     lastPurchase: new Date('2024-01-16')
   },
   {
     id: '4',
-    name: 'Suresh Reddy',
+    firstName: 'Suresh',
+    name: 'Suresh',
     phone: '+91 65432 10987',
     email: 'suresh.reddy@email.com',
     address: '321 Organic Street, Hyderabad',
     totalPurchases: 7200,
-    loyaltyPoints: 720,
     lastPurchase: new Date('2024-01-13')
   },
   {
     id: '5',
+    firstName: 'Meera',
+    lastName: 'Singh',
     name: 'Meera Singh',
     phone: '+91 54321 09876',
     email: 'meera.singh@email.com',
     address: '654 Green Valley, Chennai',
     totalPurchases: 9800,
-    loyaltyPoints: 980,
     lastPurchase: new Date('2024-01-12')
   }
 ];

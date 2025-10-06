@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, X, Sparkles } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import React from 'react';
+import { Plus, Sparkles } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import BottomNavigation from './mobile/BottomNavigation';
 import MobileDashboard from './mobile/MobileDashboard';
@@ -8,7 +7,6 @@ import MobileDashboard from './mobile/MobileDashboard';
 import InventoryScreen from './mobile/InventoryScreen';
 import CustomersScreen from './mobile/CustomersScreen';
 import AnalyticsScreen from './mobile/AnalyticsScreen';
-
 interface MobileAppProps {
   currentView: 'dashboard' | 'sales' | 'products' | 'customers' | 'analytics' | 'waste-management';
   setCurrentView: (view: 'dashboard' | 'sales' | 'products' | 'customers' | 'analytics' | 'waste-management') => void;
@@ -17,8 +15,6 @@ interface MobileAppProps {
 }
 
 const MobileApp: React.FC<MobileAppProps> = ({ currentView, setCurrentView, onNewSale, onAddProduct }) => {
-
-  const { theme } = useTheme();
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -68,7 +64,7 @@ const MobileApp: React.FC<MobileAppProps> = ({ currentView, setCurrentView, onNe
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold gradient-text">Parampara Naturals</h1>
+              <h1 className="text-lg font-bold gradient-text">Organica AI</h1>
               <p className="text-xs text-text-secondary dark:text-text-secondary-dark font-medium">Organic Store</p>
             </div>
           </div>

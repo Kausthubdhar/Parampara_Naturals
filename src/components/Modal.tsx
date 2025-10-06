@@ -1,17 +1,15 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
-  const { state } = useApp();
 
   if (!isOpen) return null;
 
@@ -25,6 +23,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         return 'max-w-2xl';
       case 'xl':
         return 'max-w-4xl';
+      case '2xl':
+        return 'max-w-6xl';
+      case '3xl':
+        return 'max-w-7xl';
       default:
         return 'max-w-lg';
     }

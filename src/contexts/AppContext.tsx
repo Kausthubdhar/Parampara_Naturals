@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
-import { Product, Customer, Sale, SaleItem, Expense, Category } from '../types';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useCallback } from 'react';
+import { Product, Customer, Sale, Expense, Category } from '../types';
+import { useNotificationService } from '../lib/notificationService';
 import { 
   listProducts, 
   createProduct, 
@@ -9,8 +10,11 @@ import {
   upsertCustomer,
   listSales,
   createSale as createSaleDB,
+  updateSalePaymentStatus,
   listExpenses,
-  createExpense as createExpenseDB
+  createExpense as createExpenseDB,
+  listCategories,
+  createDefaultCategories
 } from '../lib/db';
 
 // Action Types
@@ -31,6 +35,7 @@ type ActionType =
   | { type: 'ADD_EXPENSE'; payload: Expense }
   | { type: 'UPDATE_EXPENSE'; payload: { id: string; updates: Partial<Expense> } }
   | { type: 'DELETE_EXPENSE'; payload: string }
+  | { type: 'SET_CATEGORIES'; payload: Category[] }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_NOTIFICATION'; payload: { message: string; type: 'success' | 'error' | 'info' } }
   | { type: 'CLEAR_NOTIFICATION' }
@@ -54,12 +59,7 @@ const initialState: AppState = {
   customers: [],
   sales: [],
   expenses: [],
-  categories: [
-    { id: '1', name: 'Vegetables', icon: '🥬', color: '#16a34a' },
-    { id: '2', name: 'Fruits', icon: '🍎', color: '#ef4444' },
-    { id: '3', name: 'Grains', icon: '🌾', color: '#f59e0b' },
-    { id: '4', name: 'Dairy', icon: '🥛', color: '#3b82f6' },
-  ],
+  categories: [],
   loading: false,
   notification: null,
   modal: { isOpen: false, type: '', data: null },
@@ -180,6 +180,13 @@ function appReducer(state: AppState, action: ActionType): AppState {
         expenses: state.expenses.filter(expense => expense.id !== action.payload),
       };
     
+    
+    case 'SET_CATEGORIES':
+      return {
+        ...state,
+        categories: action.payload,
+      };
+    
     case 'SET_LOADING':
       return {
         ...state,
@@ -249,41 +256,56 @@ interface AppProviderProps {
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const notificationService = useNotificationService();
 
-  // Load data from Supabase on mount
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      const [productsData, customersData, salesData, expensesData] = await Promise.all([
+      // Load data in parallel for better performance
+      const [productsData, customersData, salesData, expensesData, categoriesData] = await Promise.all([
         listProducts(),
         listCustomers(),
         listSales(),
         listExpenses(),
+        listCategories(),
       ]);
 
-      console.log('Loaded data:', {
-        products: productsData?.length || 0,
-        customers: customersData?.length || 0,
-        sales: salesData?.length || 0,
-        expenses: expensesData?.length || 0,
-      });
-
+      // Set data in state
       dispatch({ type: 'SET_PRODUCTS', payload: productsData || [] });
       dispatch({ type: 'SET_CUSTOMERS', payload: customersData || [] });
       dispatch({ type: 'SET_SALES', payload: salesData || [] });
       dispatch({ type: 'SET_EXPENSES', payload: expensesData || [] });
+      dispatch({ type: 'SET_CATEGORIES', payload: categoriesData || [] });
+      
+      // Create default categories only if none exist (optimized)
+      if (!categoriesData || categoriesData.length === 0) {
+        await createDefaultCategories();
+      }
+      
+      // Check for low stock alerts (only if products exist)
+      if (productsData && productsData.length > 0) {
+        notificationService.checkLowStock(productsData);
+      }
+      
+      // Check for payment reminders (only if sales exist)
+      if (salesData && salesData.length > 0) {
+        salesData.forEach((sale: Sale) => {
+          notificationService.notifyPaymentReminder(sale);
+        });
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       showNotification('Error loading data from database', 'error');
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, []);
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Helper functions
   const addProduct = async (productData: Omit<Product, 'id'>) => {
@@ -291,6 +313,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const newProduct = await createProduct(productData);
       dispatch({ type: 'ADD_PRODUCT', payload: newProduct });
       showNotification('Product added successfully!', 'success');
+      
+      // Check for low stock after adding product
+      notificationService.checkLowStock([...state.products, newProduct]);
     } catch (error) {
       console.error('Error adding product:', error);
       showNotification('Error adding product', 'error');
@@ -324,9 +349,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const newCustomer = await upsertCustomer(customerData);
       dispatch({ type: 'ADD_CUSTOMER', payload: newCustomer });
       showNotification('Customer added successfully!', 'success');
+      
+      // Notify about new customer
+      notificationService.notifyNewCustomer(newCustomer);
     } catch (error) {
       console.error('Error adding customer:', error);
-      showNotification('Error adding customer', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Error adding customer';
+      showNotification(errorMessage, 'error');
     }
   };
 
@@ -334,7 +363,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const updatedCustomer = await upsertCustomer({ 
         id, 
-        name: updates.name || '', 
+        firstName: updates.firstName || '', 
+        lastName: updates.lastName || '', 
         phone: updates.phone || '',
         ...updates 
       });
@@ -353,12 +383,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const addSale = async (saleData: Omit<Sale, 'id'>) => {
     try {
+
       const newSale = await createSaleDB({
         customerId: saleData.customer?.id || null,
         paymentMethod: saleData.paymentMethod,
         items: saleData.items,
         tax: saleData.tax,
         discount: saleData.discount,
+        status: saleData.status,
+        paidAmount: saleData.paidAmount,
+        remainingAmount: saleData.remainingAmount,
+        cashReceived: saleData.cashReceived,
+        changeGiven: saleData.changeGiven,
       });
       
       // Convert to our Sale format
@@ -372,19 +408,62 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         status: saleData.status,
         tax: saleData.tax,
         discount: saleData.discount,
+        paidAmount: saleData.paidAmount,
+        remainingAmount: saleData.remainingAmount,
+        cashReceived: saleData.cashReceived,
+        changeGiven: saleData.changeGiven,
       };
       
       dispatch({ type: 'ADD_SALE', payload: formattedSale });
+      
+      // Notify about new sale
+      notificationService.notifyNewSale(formattedSale);
+      
+      // Check for payment reminders
+      notificationService.notifyPaymentReminder(formattedSale);
+      
+      // Refresh products to show updated stock levels
+      try {
+        const updatedProducts = await listProducts();
+        dispatch({ type: 'SET_PRODUCTS', payload: updatedProducts });
+        
+        // Check for low stock after sale
+        notificationService.checkLowStock(updatedProducts);
+      } catch (refreshError) {
+        console.error('Error refreshing products after sale:', refreshError);
+        // Don't show error to user as the sale was successful
+      }
+      
       showNotification('Sale completed successfully!', 'success');
     } catch (error) {
       console.error('Error adding sale:', error);
-      showNotification('Error completing sale', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Error completing sale';
+      showNotification(errorMessage, 'error');
     }
   };
 
-  const updateSale = (id: string, updates: Partial<Sale>) => {
-    dispatch({ type: 'UPDATE_SALE', payload: { id, updates } });
-    showNotification('Sale updated successfully!', 'success');
+  const updateSale = async (id: string, updates: Partial<Sale>) => {
+    try {
+      // If updating payment status, also update the database
+      if (updates.status && (updates.paidAmount !== undefined || updates.remainingAmount !== undefined)) {
+        // Handle cancelled status - set both amounts to 0
+        const paidAmount = updates.status === 'cancelled' ? 0 : (updates.paidAmount || 0);
+        const remainingAmount = updates.status === 'cancelled' ? 0 : (updates.remainingAmount || 0);
+        
+        await updateSalePaymentStatus(
+          id,
+          paidAmount,
+          remainingAmount,
+          updates.status
+        );
+      }
+      
+      dispatch({ type: 'UPDATE_SALE', payload: { id, updates } });
+      showNotification('Sale updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error updating sale:', error);
+      showNotification('Error updating sale. Please try again.', 'error');
+    }
   };
 
   const deleteSale = (id: string) => {
@@ -412,6 +491,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     dispatch({ type: 'DELETE_EXPENSE', payload: id });
     showNotification('Expense deleted successfully!', 'success');
   };
+
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
     dispatch({ type: 'SET_NOTIFICATION', payload: { message, type } });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, Users, Phone, Mail, MapPin, Star, TrendingUp, Edit, Eye, Trash2 } from 'lucide-react';
+import { Search, Plus, Filter, Users, Phone, Mail, Star, TrendingUp, Edit, Eye, Trash2 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { Customer } from '../types';
 import AddCustomerForm from './forms/AddCustomerForm';
@@ -8,9 +8,9 @@ import CustomerDetailsModal from './CustomerDetailsModal';
 import Modal from './Modal';
 
 const Customers: React.FC = () => {
-  const { state, deleteCustomer, showNotification } = useApp();
+  const { state, deleteCustomer } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'purchases' | 'loyalty'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'purchases'>('name');
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'delete'>('add');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -19,33 +19,56 @@ const Customers: React.FC = () => {
   const safeSales = state.sales || [];
 
   const filteredCustomers = safeCustomers
-    .filter(customer =>
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery) ||
-      customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    .filter(customer => {
+      const fullName = customer.firstName && customer.lastName 
+        ? `${customer.firstName} ${customer.lastName}`.toLowerCase()
+        : customer.name?.toLowerCase() || '';
+      const firstName = customer.firstName?.toLowerCase() || '';
+      const lastName = customer.lastName?.toLowerCase() || '';
+      
+      return fullName.includes(searchQuery.toLowerCase()) ||
+             firstName.includes(searchQuery.toLowerCase()) ||
+             lastName.includes(searchQuery.toLowerCase()) ||
+             customer.phone.includes(searchQuery) ||
+             customer.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case 'purchases':
           return b.totalPurchases - a.totalPurchases;
-        case 'loyalty':
-          return b.loyaltyPoints - a.loyaltyPoints;
         default:
-          return a.name.localeCompare(b.name);
+          const aName = a.firstName && a.lastName 
+            ? `${a.firstName} ${a.lastName}` 
+            : a.name || '';
+          const bName = b.firstName && b.lastName 
+            ? `${b.firstName} ${b.lastName}` 
+            : b.name || '';
+          return aName.localeCompare(bName);
       }
     });
 
   const getCustomerStats = (customer: Customer) => {
     const customerSales = safeSales.filter(sale => sale.customer?.id === customer.id);
     const totalOrders = customerSales.length;
-    const averageOrderValue = totalOrders > 0 ? customer.totalPurchases / totalOrders : 0;
+    const totalSpent = customerSales.reduce((sum, sale) => sum + sale.total, 0);
+    const averageOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
     
-    return { totalOrders, averageOrderValue };
+    // Get the most recent purchase date
+    const lastPurchase = customerSales.length > 0 
+      ? new Date(Math.max(...customerSales.map(sale => new Date(sale.date).getTime())))
+      : null;
+    
+    return { totalOrders, totalSpent, averageOrderValue, lastPurchase };
   };
 
-  const totalRevenue = safeCustomers.reduce((sum, c) => sum + c.totalPurchases, 0);
+  // Calculate stats from actual sales data
+  const totalRevenue = safeSales.reduce((sum, sale) => sum + sale.total, 0);
   const averagePurchase = safeCustomers.length > 0 ? totalRevenue / safeCustomers.length : 0;
-  const repeatCustomers = safeCustomers.filter(c => c.totalPurchases > 1000).length;
+  const repeatCustomers = safeCustomers.filter(customer => {
+    const customerSales = safeSales.filter(sale => sale.customer?.id === customer.id);
+    const totalSpent = customerSales.reduce((sum, sale) => sum + sale.total, 0);
+    return totalSpent > 1000; // Customers who spent more than ₹1000
+  }).length;
 
   const openModal = (type: 'add' | 'edit' | 'view' | 'delete', customer?: Customer) => {
     setModalType(type);
@@ -194,7 +217,6 @@ const Customers: React.FC = () => {
             >
               <option value="name">Sort by Name</option>
               <option value="purchases">Sort by Total Purchases</option>
-              <option value="loyalty">Sort by Loyalty Points</option>
             </select>
           </div>
         </div>
@@ -248,20 +270,16 @@ const Customers: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="font-semibold text-primary">₹{(customer.totalPurchases || 0).toLocaleString()}</span>
+                      <span className="font-semibold text-primary">₹{stats.totalSpent.toLocaleString()}</span>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm text-gray-600">{stats.totalOrders}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center space-x-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <span className="font-medium text-accent-brown">{customer.loyaltyPoints}</span>
-                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm text-gray-600">
-                        {customer.lastPurchase ? new Date(customer.lastPurchase).toLocaleDateString() : 'Never'}
+                        {stats.lastPurchase ? stats.lastPurchase.toLocaleDateString() : 'Never'}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -320,7 +338,13 @@ const Customers: React.FC = () => {
           <h3 className="text-lg font-semibold text-text mb-4">🏆 Top Customers</h3>
           <div className="space-y-3">
             {state.customers
-              .sort((a, b) => b.totalPurchases - a.totalPurchases)
+              .map(customer => ({
+                ...customer,
+                totalSpent: safeSales
+                  .filter(sale => sale.customer?.id === customer.id)
+                  .reduce((sum, sale) => sum + sale.total, 0)
+              }))
+              .sort((a, b) => b.totalSpent - a.totalSpent)
               .slice(0, 5)
               .map((customer, index) => (
                 <div key={customer.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
@@ -328,12 +352,15 @@ const Customers: React.FC = () => {
                     {index + 1}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-text text-sm">{customer.name}</p>
+                    <p className="font-medium text-text text-sm">
+                      {customer.firstName && customer.lastName 
+                        ? `${customer.firstName} ${customer.lastName}` 
+                        : customer.name || ''}
+                    </p>
                     <p className="text-xs text-gray-600">{customer.phone}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-primary text-sm">₹{(customer.totalPurchases || 0).toLocaleString()}</p>
-                    <p className="text-xs text-gray-600">{customer.loyaltyPoints} pts</p>
+                    <p className="font-medium text-primary text-sm">₹{customer.totalSpent.toLocaleString()}</p>
                   </div>
                 </div>
               ))}

@@ -10,11 +10,10 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, onNewSale }) => {
   const { state } = useApp();
-  const { sales, customers } = state;
+  const { sales } = state;
   
   // Calculate live stats
   const safeSales = sales || [];
-  const safeCustomers = customers || [];
   
   const today = new Date();
   const todaySales = safeSales
@@ -24,7 +23,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, onNewSal
     })
     .reduce((sum, sale) => sum + sale.total, 0);
   
-  const totalOrders = safeSales.length;
+  const todayOrders = safeSales
+    .filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.toDateString() === today.toDateString();
+    }).length;
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -102,8 +105,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, onNewSal
             </div>
             <div className="p-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Orders</span>
-                <span className="text-lg font-bold text-blue-700 dark:text-blue-300">{totalOrders}</span>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Today's Orders</span>
+                <span className="text-lg font-bold text-blue-700 dark:text-blue-300">{todayOrders}</span>
               </div>
             </div>
           </div>

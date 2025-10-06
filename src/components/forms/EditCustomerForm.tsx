@@ -11,7 +11,8 @@ interface EditCustomerFormProps {
 const EditCustomerForm: React.FC<EditCustomerFormProps> = ({ customer, onClose }) => {
   const { updateCustomer } = useApp();
   const [formData, setFormData] = useState({
-    name: customer.name,
+    firstName: customer.firstName || customer.name?.split(' ')[0] || '',
+    lastName: customer.lastName || customer.name?.split(' ').slice(1).join(' ') || '',
     phone: customer.phone,
     email: customer.email || '',
     address: customer.address || '',
@@ -20,7 +21,8 @@ const EditCustomerForm: React.FC<EditCustomerFormProps> = ({ customer, onClose }
 
   useEffect(() => {
     setFormData({
-      name: customer.name,
+      firstName: customer.firstName || customer.name?.split(' ')[0] || '',
+      lastName: customer.lastName || customer.name?.split(' ').slice(1).join(' ') || '',
       phone: customer.phone,
       email: customer.email || '',
       address: customer.address || '',
@@ -39,9 +41,11 @@ const EditCustomerForm: React.FC<EditCustomerFormProps> = ({ customer, onClose }
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Customer name is required';
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
     }
+
+    // Last name is optional, no validation needed
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -65,7 +69,8 @@ const EditCustomerForm: React.FC<EditCustomerFormProps> = ({ customer, onClose }
     }
 
     const updates: Partial<Customer> = {
-      name: formData.name.trim(),
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
       phone: formData.phone.trim(),
       email: formData.email.trim() || undefined,
       address: formData.address.trim() || undefined,
@@ -78,24 +83,45 @@ const EditCustomerForm: React.FC<EditCustomerFormProps> = ({ customer, onClose }
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Customer Name */}
-        <div className="md:col-span-2">
+        {/* First Name */}
+        <div>
           <label className="block text-sm font-medium text-text dark:text-text-dark mb-2">
-            Customer Name *
+            First Name *
           </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="firstName"
+              value={formData.firstName}
               onChange={handleChange}
-              className={`input-field pl-10 ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
-              placeholder="Enter customer name"
+              className={`input-field pl-10 ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
+              placeholder="Enter first name"
             />
           </div>
-          {errors.name && (
-            <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+          {errors.firstName && (
+            <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+          )}
+        </div>
+
+        {/* Last Name */}
+        <div>
+          <label className="block text-sm font-medium text-text dark:text-text-dark mb-2">
+            Last Name
+          </label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              className={`input-field pl-10 ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
+              placeholder="Enter last name"
+            />
+          </div>
+          {errors.lastName && (
+            <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
           )}
         </div>
 

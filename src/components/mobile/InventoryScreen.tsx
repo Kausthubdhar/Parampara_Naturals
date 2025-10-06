@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, Package, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Filter, Package, AlertTriangle } from 'lucide-react';
 import { Product } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 

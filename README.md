@@ -1,15 +1,15 @@
-# 🥬 Parampara Naturals - Store Management Application
+# 🤖 Organica AI - Intelligent Store Management Application
 
-A comprehensive, professional store management application designed specifically for organic stores in India. Built with React, TypeScript, and Tailwind CSS, featuring a mobile-first design approach with comprehensive business management capabilities.
+A comprehensive, AI-powered store management application designed specifically for organic stores. Built with React, TypeScript, and Tailwind CSS, featuring intelligent automation, dark/light theme support, and comprehensive business management capabilities.
 
 ## ✨ Features
 
-### 🏠 Dashboard
-- **Sales Overview**: Daily, weekly, monthly revenue charts with Recharts
-- **Key Metrics**: Total sales, orders count, top products, customer count
-- **Recent Activity**: Latest orders, low stock alerts
+### 🏠 AI-Powered Dashboard
+- **Intelligent Sales Overview**: Daily, weekly, monthly revenue charts with AI insights
+- **Smart Metrics**: Total sales, orders count, top products, customer count with predictions
+- **AI Recommendations**: Latest orders, low stock alerts, and intelligent suggestions
 - **Quick Actions**: New sale, add product, view customers buttons
-- **Analytics Charts**: Sales trends, order patterns, and performance metrics
+- **Advanced Analytics**: Sales trends, order patterns, and AI-powered performance metrics
 
 ### 🛒 Sales Management
 - **New Sale Screen**: 
@@ -18,9 +18,8 @@ A comprehensive, professional store management application designed specifically
   - Shopping cart with quantity adjustments
   - Customer information capture (name, phone, email, address)
   - Multiple payment methods (cash, card, UPI)
-  - Receipt generation capabilities
 - **Sales History**: Complete transaction log with search and filters
-- **Receipt System**: Professional receipt generation
+- **Receipt System**: Professional receipt generation and PDF export
 
 ### 📦 Product Management
 - **Product Catalog**: Grid/list view with high-quality Unsplash images
@@ -49,14 +48,16 @@ A comprehensive, professional store management application designed specifically
 - **Touch Gestures**: Swipe actions, pull-to-refresh
 - **Offline Capability**: Local storage for critical data
 
+
 ## 🎨 Design System
 
 ### Color Palette
 - **Primary**: #4CAF50 (natural green)
-- **Background**: #F9F9F9 (off-white)
-- **Text**: #1A1A1A (dark grey)
+- **Background**: #F9F9F9 (light) / #1F2937 (dark)
+- **Text**: #1A1A1A (light) / #F9FAFB (dark)
 - **Accent Colors**: Warm earthy tones (#8D6E63, #FF9800)
-- **Secondary**: #F1F8E9 (light green)
+- **Secondary**: #F1F8E9 (light) / #064E3B (dark)
+- **Theme Support**: Full dark/light mode with smooth transitions
 
 ### Typography
 - **Font**: Inter (with system font fallbacks)
@@ -66,9 +67,10 @@ A comprehensive, professional store management application designed specifically
 ### Visual Style
 - Card-based layout with rounded corners (0.75rem radius)
 - Subtle shadows for depth
-- Light theme only (force disable dark mode)
+- **Dual Theme Support**: Beautiful light and dark modes
 - Minimalist and clean interface
 - Touch-friendly interactions with proper spacing
+- Professional AI-themed design elements
 
 ## 🚀 Technology Stack
 
@@ -78,7 +80,9 @@ A comprehensive, professional store management application designed specifically
 - **Icons**: Lucide React
 - **Charts**: Recharts library for data visualization
 - **Images**: Unsplash integration for product photos
-- **State Management**: React hooks (useState, useEffect)
+- **State Management**: React hooks (useState, useEffect, useContext)
+- **Authentication**: Custom auth context with localStorage persistence
+- **Theme Management**: Dark/light mode with system preference detection
 
 ## 📁 Project Structure
 
@@ -134,7 +138,6 @@ interface Customer {
   email?: string;
   address?: string;
   totalPurchases: number;
-  loyaltyPoints: number;
   lastPurchase?: Date;
 }
 ```
@@ -164,7 +167,7 @@ interface Sale {
 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd parampara-naturals
+cd organica-ai
 ```
 
 2. Install dependencies
@@ -183,6 +186,7 @@ npm start
 ```bash
 npm run build
 ```
+
 
 ## 📱 Responsive Behavior
 
@@ -236,7 +240,7 @@ The application includes realistic sample data for:
 ### Managing Customers
 1. Go to Customers section
 2. Add new customer with contact details
-3. Track purchase history and loyalty points
+3. Track purchase history and customer analytics
 4. View customer analytics and insights
 
 ### Generating Reports
@@ -272,4 +276,4 @@ For support and questions, please open an issue in the repository or contact the
 
 ---
 
-**Built with ❤️ for organic store owners in India**
+**Built with ❤️ and AI intelligence for organic store owners worldwide**

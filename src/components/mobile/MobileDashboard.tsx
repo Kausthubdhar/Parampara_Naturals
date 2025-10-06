@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, ShoppingCart, Package, Users, Plus, Sparkles } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Package, Users, Plus, Activity } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 interface MobileDashboardProps {
@@ -26,9 +26,15 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ onNewSale, onAddProdu
     })
     .reduce((sum, sale) => sum + sale.total, 0);
 
+  const todayOrders = sales
+    .filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.toDateString() === today.toDateString();
+    }).length;
+
   const quickStats = [
     { label: 'Today Sales', value: `₹${(todaySales || 0).toLocaleString()}`, icon: TrendingUp, color: 'text-green-600 dark:text-green-400', bgGradient: 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20' },
-    { label: 'Orders', value: stats.totalOrders.toString(), icon: ShoppingCart, color: 'text-blue-600 dark:text-blue-400', bgGradient: 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20' },
+    { label: 'Today\'s Orders', value: todayOrders.toString(), icon: ShoppingCart, color: 'text-blue-600 dark:text-blue-400', bgGradient: 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20' },
     { label: 'Products', value: stats.totalProducts.toString(), icon: Package, color: 'text-orange-600 dark:text-orange-400', bgGradient: 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20' },
     { label: 'Customers', value: stats.totalCustomers.toString(), icon: Users, color: 'text-purple-600 dark:text-purple-400', bgGradient: 'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20' },
   ];
@@ -50,11 +56,15 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ onNewSale, onAddProdu
       <div className="card bg-gradient-to-r from-primary/10 to-primary-dark/10 border-primary/20">
         <div className="flex items-center space-x-3">
           <div className="p-3 bg-gradient-to-r from-primary to-primary-dark rounded-xl shadow-lg">
-            <Sparkles className="w-6 h-6 text-white" />
+            <Activity className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-text dark:text-text-dark">Welcome back! 👋</h2>
-            <p className="text-text-secondary dark:text-text-secondary-dark text-sm">Here's your store overview today</p>
+            <h2 className="text-xl font-bold text-text dark:text-text-dark">
+              Business Overview
+            </h2>
+            <p className="text-text-secondary dark:text-text-secondary-dark text-sm">
+              {`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}. Your store performance summary.`}
+            </p>
           </div>
         </div>
       </div>
@@ -89,7 +99,7 @@ const MobileDashboard: React.FC<MobileDashboardProps> = ({ onNewSale, onAddProdu
           {recentSales.map((sale) => (
             <div key={sale.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-secondary/30 to-secondary/10 dark:from-secondary-dark/30 dark:to-secondary-dark/10 rounded-xl hover:scale-105 transition-transform duration-200">
               <div>
-                <p className="text-sm font-semibold text-text dark:text-text-dark">Order #{sale.id.slice(-6)}</p>
+                <p className="text-sm font-semibold text-text dark:text-text-dark">Order #{sale.receiptId || sale.id}</p>
                 <p className="text-xs text-text-secondary dark:text-text-secondary-dark">{sale.customer?.name || 'Walk-in Customer'}</p>
               </div>
               <div className="text-right">

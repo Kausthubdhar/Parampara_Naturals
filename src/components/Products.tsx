@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, Package, AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Filter, Package, AlertTriangle, Edit, X } from 'lucide-react';
 import { Product } from '../types';
 import { useApp } from '../contexts/AppContext';
+import EditProductForm from './forms/EditProductForm';
 
 interface ProductsProps {
   onAddProduct?: () => void;
@@ -11,6 +12,7 @@ const Products: React.FC<ProductsProps> = ({ onAddProduct }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { state, updateProduct, showNotification } = useApp();
 
   const { products, categories } = state;
@@ -28,6 +30,14 @@ const Products: React.FC<ProductsProps> = ({ onAddProduct }) => {
     const newStock = product.stock + 10;
     updateProduct(product.id, { stock: newStock });
     showNotification(`${product.name} restocked with 10 ${product.unit}`, 'success');
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+  };
+
+  const handleCloseEdit = () => {
+    setEditingProduct(null);
   };
 
   return (
@@ -162,11 +172,17 @@ const Products: React.FC<ProductsProps> = ({ onAddProduct }) => {
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
               )}
               <div className="flex space-x-2">
-                <button className="flex-1 btn-secondary text-sm py-2">
+                <button 
+                  onClick={() => handleEdit(product)}
+                  className="flex-1 btn-secondary text-sm py-2"
+                >
                   <Edit className="h-4 w-4 mr-1 inline" />
                   Edit
                 </button>
-                <button className="flex-1 btn-primary text-sm py-2">
+                <button 
+                  onClick={() => handleRestock(product)}
+                  className="flex-1 btn-primary text-sm py-2"
+                >
                   Restock
                 </button>
               </div>
@@ -225,16 +241,19 @@ const Products: React.FC<ProductsProps> = ({ onAddProduct }) => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex space-x-2">
-                        <button className="btn-secondary text-xs px-3 py-1">
+                        <button 
+                          onClick={() => handleEdit(product)}
+                          className="btn-secondary text-xs px-3 py-1"
+                        >
                           <Edit className="h-3 w-3 mr-1 inline" />
                           Edit
                         </button>
-                                        <button 
-                  onClick={() => handleRestock(product)}
-                  className="btn-primary text-xs px-3 py-1"
-                >
-                  Restock
-                </button>
+                        <button 
+                          onClick={() => handleRestock(product)}
+                          className="btn-primary text-xs px-3 py-1"
+                        >
+                          Restock
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -298,6 +317,34 @@ const Products: React.FC<ProductsProps> = ({ onAddProduct }) => {
           <p className="text-gray-600">Low Stock Items</p>
         </div>
       </div>
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-text dark:text-text-dark">Edit Product</h2>
+                <button
+                  onClick={handleCloseEdit}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <EditProductForm 
+                product={editingProduct} 
+                onClose={handleCloseEdit}
+                onUpdate={(updatedProduct) => {
+                  const { id, ...updates } = updatedProduct;
+                  updateProduct(id, updates);
+                  handleCloseEdit();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

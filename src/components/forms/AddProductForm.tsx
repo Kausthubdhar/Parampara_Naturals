@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Package, Save, X, Image, Search, ExternalLink, Sparkles, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Save, X, Image, Search, ExternalLink, Sparkles, RefreshCw, Upload, Trash2 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Product } from '../../types';
 
@@ -40,10 +40,15 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // New state for AI image suggestions
-  const [imageMode, setImageMode] = useState<'manual' | 'ai'>('manual');
+  const [imageMode, setImageMode] = useState<'upload' | 'ai'>('upload');
   const [suggestedImages, setSuggestedImages] = useState<UnsplashImage[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
+  
+  // File upload state
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -52,6 +57,49 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  // File upload handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+      
+      setUploadedFile(file);
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      
+      // Update form data with the file (we'll convert to base64 later)
+      setFormData(prev => ({ ...prev, image: url }));
+    }
+  };
+
+  const handleRemoveFile = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setUploadedFile(null);
+    setPreviewUrl('');
+    setFormData(prev => ({ ...prev, image: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const validateForm = () => {
@@ -82,7 +130,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
   };
 
   // Function to fetch AI-suggested images
-  const fetchSuggestedImages = async () => {
+  const fetchSuggestedImages = useCallback(async () => {
     if (!formData.name.trim() || !formData.category.trim()) {
       return;
     }
@@ -119,7 +167,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
     } finally {
       setIsLoadingImages(false);
     }
-  };
+  }, [formData.name, formData.category]);
 
   // Auto-fetch images when product name or category changes
   useEffect(() => {
@@ -130,16 +178,43 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [formData.name, formData.category]);
+  }, [formData.name, formData.category, fetchSuggestedImages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    const newProduct: Omit<Product, 'id'> = {
+    let imageUrl = formData.image.trim();
+    
+    // If we have an uploaded file, convert it to base64
+    if (uploadedFile) {
+      try {
+        const base64 = await convertFileToBase64(uploadedFile);
+        imageUrl = base64;
+      } catch (error) {
+        console.error('Error converting file to base64:', error);
+        alert('Error processing image file. Please try again.');
+        return;
+      }
+    }
+
+    // Find the category ID based on the selected category name
+    const selectedCategory = state.categories.find(cat => cat.name === formData.category.trim());
+    const categoryId = selectedCategory?.id;
+
+    const newProduct: Omit<Product, 'id'> & { categoryId?: string } = {
       name: formData.name.trim(),
       description: formData.description.trim(),
       price: parseFloat(formData.price),
@@ -147,13 +222,24 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
       minStock: parseInt(formData.minStock),
       unit: formData.unit,
       category: formData.category.trim(),
-      image: formData.image.trim() || '',
+      categoryId: categoryId,
+      image: imageUrl,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     addProduct(newProduct);
     onClose();
+  };
+
+  // Helper function to convert file to base64
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
   return (
@@ -303,15 +389,15 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
           <div className="flex space-x-2 mb-3">
             <button
               type="button"
-              onClick={() => setImageMode('manual')}
+              onClick={() => setImageMode('upload')}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                imageMode === 'manual'
+                imageMode === 'upload'
                   ? 'bg-primary text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
-              <Image className="w-4 h-4" />
-              <span>Manual URL</span>
+              <Upload className="w-4 h-4" />
+              <span>Upload Photo</span>
             </button>
             
             <button
@@ -328,27 +414,56 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose }) => {
             </button>
           </div>
 
-          {imageMode === 'manual' ? (
-            /* Manual URL Input */
-            <div>
+          {imageMode === 'upload' ? (
+            /* File Upload Interface */
+            <div className="space-y-3">
+              {/* Hidden file input */}
               <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="https://example.com/image.jpg"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
               />
-              {formData.image && (
-                <div className="mt-2">
+              
+              {/* Upload button */}
+              <div className="flex items-center justify-center w-full">
+                <button
+                  type="button"
+                  onClick={handleUploadClick}
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="font-medium text-primary">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    PNG, JPG, GIF up to 5MB
+                  </p>
+                </button>
+              </div>
+              
+              {/* File preview */}
+              {previewUrl && (
+                <div className="relative inline-block">
                   <img 
-                    src={formData.image} 
+                    src={previewUrl} 
                     alt="Preview" 
-                    className="w-20 h-20 object-cover rounded-lg border"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    className="w-32 h-32 object-cover rounded-lg border shadow-sm"
                   />
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  {uploadedFile && (
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="font-medium">{uploadedFile.name}</p>
+                      <p>{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Filter, Calendar, TrendingDown, AlertTriangle, CheckCircle, Clock, X } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
+import { Trash2, Plus, Filter, Calendar, TrendingDown, CheckCircle, Clock, X } from 'lucide-react';
 import AddWasteEntryForm from './forms/AddWasteEntryForm';
 
 interface WasteEntry {
@@ -17,7 +16,6 @@ interface WasteEntry {
 }
 
 const WasteManagement: React.FC = () => {
-  const { state } = useApp();
   const [wasteEntries, setWasteEntries] = useState<WasteEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

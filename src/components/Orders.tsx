@@ -1,30 +1,89 @@
-import React, { useState } from 'react';
-import { Search, Filter, Calendar, Download, Eye, Printer, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Calendar, Eye, Printer, Phone, CheckCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { Sale } from '../types';
+import ViewSaleItemsModal from './ViewSaleItemsModal';
+import ReceiptModal from './ReceiptModal';
+import PaymentCompleteModal from './PaymentCompleteModal';
+import { getUserProfile, getCurrentUserProfileId } from '../lib/supabaseAuth';
 
 interface OrdersProps {
   onNewSale?: () => void;
 }
 
 const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
-  const { state } = useApp();
+  const { state, updateSale } = useApp();
   const { sales } = state;
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending' | 'cancelled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending' | 'partial' | 'cancelled'>('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+  const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [paymentCompleteSale, setPaymentCompleteSale] = useState<Sale | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        // Error fetching user profile - will retry on next auth state change
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  // Get store name from localStorage as fallback
+  const getStoreName = () => {
+    if (userProfile?.store_name) {
+      return userProfile.store_name;
+    }
+    // Fallback to localStorage or default
+    return localStorage.getItem('organica_store_name') || 'Parampara Naturals';
+  };
 
   const filteredSales = sales.filter(sale => {
+    const customerName = sale.customer?.firstName && sale.customer?.lastName 
+      ? `${sale.customer.firstName} ${sale.customer.lastName}`.toLowerCase()
+      : sale.customer?.name?.toLowerCase() || '';
+    const firstName = sale.customer?.firstName?.toLowerCase() || '';
+    const lastName = sale.customer?.lastName?.toLowerCase() || '';
+    
     const matchesSearch = 
-      sale.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sale.id.toLowerCase().includes(searchQuery.toLowerCase());
+      customerName.includes(searchQuery.toLowerCase()) ||
+      firstName.includes(searchQuery.toLowerCase()) ||
+      lastName.includes(searchQuery.toLowerCase()) ||
+      sale.customer?.phone?.includes(searchQuery) ||
+      sale.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (sale.receiptId && sale.receiptId.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    // Date filtering
+    const saleDate = new Date(sale.date);
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    let matchesDate = true;
+    if (dateFilter === 'today') {
+      matchesDate = saleDate.toDateString() === today.toDateString();
+    } else if (dateFilter === 'week') {
+      matchesDate = saleDate >= startOfWeek;
+    } else if (dateFilter === 'month') {
+      matchesDate = saleDate >= startOfMonth;
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
-  const completedSales = sales.filter(sale => sale.status === 'completed');
   const pendingSales = sales.filter(sale => sale.status === 'pending');
+  const partialSales = sales.filter(sale => sale.status === 'partial');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -32,6 +91,8 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'partial':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
       case 'cancelled':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       default:
@@ -49,6 +110,37 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
         return '📱';
       default:
         return '💰';
+    }
+  };
+
+  const handleViewSale = (sale: Sale) => {
+    setViewingSale(sale);
+  };
+
+  const handleCloseView = () => {
+    setViewingSale(null);
+  };
+
+  const handleReceipt = (sale: Sale) => {
+    setReceiptSale(sale);
+  };
+
+  const handleCloseReceipt = () => {
+    setReceiptSale(null);
+  };
+
+  const handleMarkAsPaid = (saleId: string) => {
+    const sale = sales.find(s => s.id === saleId);
+    if (sale) {
+      setPaymentCompleteSale(sale);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (paymentCompleteSale) {
+      // Update the sale status to completed
+      updateSale(paymentCompleteSale.id, { status: 'completed' });
+      setPaymentCompleteSale(null);
     }
   };
 
@@ -79,13 +171,6 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
           <p className="text-text-secondary dark:text-text-secondary-dark">Total Orders</p>
         </div>
 
-        <div className="card text-center">
-          <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <Calendar className="h-8 w-8 text-green-600 dark:text-green-400" />
-          </div>
-          <p className="text-3xl font-bold text-green-600 dark:text-green-400">{completedSales.length}</p>
-          <p className="text-text-secondary dark:text-text-secondary-dark">Completed</p>
-        </div>
 
         <div className="card text-center">
           <div className="p-4 bg-yellow-100 dark:bg-yellow-900/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -93,6 +178,14 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
           </div>
           <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{pendingSales.length}</p>
           <p className="text-text-secondary dark:text-text-secondary-dark">Pending</p>
+        </div>
+
+        <div className="card text-center">
+          <div className="p-4 bg-blue-100 dark:bg-blue-900/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          </div>
+          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{partialSales.length}</p>
+          <p className="text-text-secondary dark:text-text-secondary-dark">Partial</p>
         </div>
 
         <div className="card text-center">
@@ -128,6 +221,7 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
               <option value="all">All Status</option>
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -146,10 +240,6 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
             </select>
           </div>
 
-          <button className="btn-secondary flex items-center space-x-2 px-4 py-3">
-            <Download className="h-5 w-5" />
-            <span>Export</span>
-          </button>
         </div>
       </div>
 
@@ -159,7 +249,6 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/50 dark:border-border-dark/50">
-                <th className="text-left py-3 px-4 font-medium text-text dark:text-text-dark">Order ID</th>
                 <th className="text-left py-3 px-4 font-medium text-text dark:text-text-dark">Customer</th>
                 <th className="text-left py-3 px-4 font-medium text-text dark:text-text-dark">Items</th>
                 <th className="text-left py-3 px-4 font-medium text-text dark:text-text-dark">Total</th>
@@ -173,9 +262,6 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
               {filteredSales.map((sale) => (
                 <tr key={sale.id} className="border-b border-border/30 dark:border-border-dark/30 hover:bg-secondary/30 dark:hover:bg-secondary-dark/30">
                   <td className="py-3 px-4">
-                    <span className="font-mono text-sm font-medium text-primary dark:text-primary-dark">#{sale.id}</span>
-                  </td>
-                  <td className="py-3 px-4">
                     <div>
                       <p className="font-medium text-text dark:text-text-dark">
                         {sale.customer?.name || 'Walk-in Customer'}
@@ -183,17 +269,14 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
                       {sale.customer?.phone && (
                         <p className="text-sm text-text-secondary dark:text-text-secondary-dark">{sale.customer.phone}</p>
                       )}
+                      <p className="text-xs text-text-secondary dark:text-text-secondary-dark font-mono">Order #{sale.receiptId || sale.id}</p>
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="space-y-1">
-                      {sale.items.map((item, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <span className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                            {item.productName} ({item.quantity})
-                          </span>
-                        </div>
-                      ))}
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-text dark:text-text-dark">
+                        {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -217,14 +300,29 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex space-x-2">
-                      <button className="btn-secondary text-xs px-3 py-1">
+                      <button 
+                        onClick={() => handleViewSale(sale)}
+                        className="btn-secondary text-xs px-3 py-1 hover:bg-secondary/80 dark:hover:bg-secondary-dark/80 transition-colors"
+                      >
                         <Eye className="h-3 w-3 mr-1 inline" />
                         View
                       </button>
-                      <button className="btn-primary text-xs px-3 py-1">
+                      <button 
+                        onClick={() => handleReceipt(sale)}
+                        className="btn-primary text-xs px-3 py-1 hover:bg-primary/80 dark:hover:bg-primary-dark/80 transition-colors"
+                      >
                         <Printer className="h-3 w-3 mr-1 inline" />
                         Receipt
                       </button>
+                      {(sale.status === 'pending' || sale.status === 'partial') && (
+                        <button 
+                          onClick={() => handleMarkAsPaid(sale.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded-lg transition-colors"
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1 inline" />
+                          Mark Paid
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -264,7 +362,7 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
                   </div>
                   <div>
                     <p className="font-medium text-text dark:text-text-dark text-sm">
-                      #{sale.id} - {sale.customer?.name || 'Walk-in Customer'}
+                      Order #{sale.receiptId || sale.id} - {sale.customer?.name || 'Walk-in Customer'}
                     </p>
                     <p className="text-xs text-text-secondary dark:text-text-secondary-dark">
                       {new Date(sale.date).toLocaleDateString()}
@@ -302,6 +400,28 @@ const Orders: React.FC<OrdersProps> = ({ onNewSale }) => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <ViewSaleItemsModal 
+        sale={viewingSale} 
+        onClose={handleCloseView} 
+      />
+      <ReceiptModal 
+        sale={receiptSale} 
+        onClose={handleCloseReceipt}
+        storeName={getStoreName()}
+        storePhone={userProfile?.phone || '+91 98765 43210'}
+        storeEmail={userProfile?.email || 'info@paramparanaturals.com'}
+        storeAddress={userProfile?.address || '123 Green Street, Organic City, India - 110001'}
+      />
+
+      {/* Payment Complete Modal */}
+      <PaymentCompleteModal
+        isOpen={!!paymentCompleteSale}
+        onClose={() => setPaymentCompleteSale(null)}
+        onConfirm={handleConfirmPayment}
+        sale={paymentCompleteSale || { id: '', receiptId: '', total: 0, status: 'pending', paidAmount: 0, remainingAmount: 0 }}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Save, X, Phone, Mail, MapPin } from 'lucide-react';
+import { User, Save, X, Phone, Mail, MapPin, Calendar } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Customer } from '../../types';
 
@@ -8,35 +8,53 @@ interface AddCustomerFormProps {
 }
 
 const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onClose }) => {
-  const { addCustomer } = useApp();
+  const { addCustomer, state } = useApp();
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     phone: '',
     email: '',
     address: '',
+    ageGroup: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [phoneExists, setPhoneExists] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+    
+    // Check if phone number already exists
+    if (name === 'phone') {
+      const cleanPhone = value.replace(/\D/g, '');
+      if (cleanPhone.length === 10) {
+        const existingCustomer = state.customers.find(c => c.phone === cleanPhone);
+        setPhoneExists(!!existingCustomer);
+      } else {
+        setPhoneExists(false);
+      }
+    }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Customer name is required';
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
     }
+
+    // Last name is optional, no validation needed
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
     } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/\D/g, ''))) {
       newErrors.phone = 'Please enter a valid 10-digit phone number';
+    } else if (phoneExists) {
+      newErrors.phone = 'You already have a customer with this phone number';
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -55,12 +73,13 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onClose }) => {
     }
 
     const newCustomer: Omit<Customer, 'id'> = {
-      name: formData.name.trim(),
+      firstName: formData.firstName.trim(),
+      lastName: formData.lastName.trim(),
       phone: formData.phone.trim(),
       email: formData.email.trim() || undefined,
       address: formData.address.trim() || undefined,
+      ageGroup: formData.ageGroup as '0-12' | '13-17' | '18-25' | '26-35' | '36-45' | '46-55' | '56-65' | '65+' | undefined,
       totalPurchases: 0,
-      loyaltyPoints: 0,
     };
 
     addCustomer(newCustomer);
@@ -70,24 +89,45 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onClose }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Customer Name */}
-        <div className="md:col-span-2">
+        {/* First Name */}
+        <div>
           <label className="block text-sm font-medium text-text dark:text-text-dark mb-2">
-            Customer Name *
+            First Name *
           </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="firstName"
+              value={formData.firstName}
               onChange={handleChange}
-              className={`input-field pl-10 ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
-              placeholder="Enter customer name"
+              className={`input-field pl-10 ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
+              placeholder="Enter first name"
             />
           </div>
-          {errors.name && (
-            <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+          {errors.firstName && (
+            <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+          )}
+        </div>
+
+        {/* Last Name */}
+        <div>
+          <label className="block text-sm font-medium text-text dark:text-text-dark mb-2">
+            Last Name
+          </label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              className={`input-field pl-10 ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
+              placeholder="Enter last name"
+            />
+          </div>
+          {errors.lastName && (
+            <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
           )}
         </div>
 
@@ -103,12 +143,20 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onClose }) => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className={`input-field pl-10 ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}`}
+              className={`input-field pl-10 ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : phoneExists ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500/30' : ''}`}
               placeholder="Enter phone number"
             />
+            {phoneExists && !errors.phone && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <span className="text-yellow-500 text-xs">⚠️ Exists</span>
+              </div>
+            )}
           </div>
           {errors.phone && (
             <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+          )}
+          {phoneExists && !errors.phone && (
+            <p className="text-yellow-600 text-xs mt-1">⚠️ You already have a customer with this phone number</p>
           )}
         </div>
 
@@ -131,6 +179,32 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onClose }) => {
           {errors.email && (
             <p className="text-red-500 text-xs mt-1">{errors.email}</p>
           )}
+        </div>
+
+        {/* Age Group */}
+        <div>
+          <label className="block text-sm font-medium text-text dark:text-text-dark mb-2">
+            Age Group
+          </label>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <select
+              name="ageGroup"
+              value={formData.ageGroup}
+              onChange={handleChange}
+              className="input-field pl-10"
+            >
+              <option value="">Select age group</option>
+              <option value="0-12">0-12 years</option>
+              <option value="13-17">13-17 years</option>
+              <option value="18-25">18-25 years</option>
+              <option value="26-35">26-35 years</option>
+              <option value="36-45">36-45 years</option>
+              <option value="46-55">46-55 years</option>
+              <option value="56-65">56-65 years</option>
+              <option value="65+">65+ years</option>
+            </select>
+          </div>
         </div>
 
         {/* Address */}

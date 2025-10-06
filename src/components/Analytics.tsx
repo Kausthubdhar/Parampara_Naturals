@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Calendar, Download, Filter, DollarSign, Users, Package } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { BarChart3, TrendingUp, Calendar, Download, Filter, DollarSign } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { useApp } from '../contexts/AppContext';
 
 const Analytics: React.FC = () => {
@@ -118,7 +118,7 @@ const Analytics: React.FC = () => {
           <p className="text-gray-600">Total Revenue</p>
           <div className="mt-2 flex items-center justify-center text-sm text-green-600">
             <TrendingUp className="h-4 w-4 mr-1" />
-            +12.5% from last month
+            Real-time data
           </div>
         </div>
 
@@ -130,7 +130,7 @@ const Analytics: React.FC = () => {
           <p className="text-gray-600">Total Expenses</p>
           <div className="mt-2 flex items-center justify-center text-sm text-red-600">
             <TrendingUp className="h-4 w-4 mr-1" />
-            +8.2% from last month
+            Real-time data
           </div>
         </div>
 
@@ -142,7 +142,7 @@ const Analytics: React.FC = () => {
           <p className="text-gray-600">Net Profit</p>
           <div className="mt-2 flex items-center justify-center text-sm text-green-600">
             <TrendingUp className="h-4 w-4 mr-1" />
-            +15.3% from last month
+            Real-time data
           </div>
         </div>
 
@@ -154,7 +154,7 @@ const Analytics: React.FC = () => {
           <p className="text-gray-600">Profit Margin</p>
           <div className="mt-2 flex items-center justify-center text-sm text-green-600">
             <TrendingUp className="h-4 w-4 mr-1" />
-            +2.1% from last month
+            Real-time data
           </div>
         </div>
       </div>

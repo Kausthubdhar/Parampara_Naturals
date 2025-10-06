@@ -102,13 +102,6 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ customer, s
                     <span className="font-bold text-primary">{totalOrders}</span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Star className="h-5 w-5 text-yellow-500" />
-                      <span className="text-text dark:text-text-dark">Loyalty Points</span>
-                    </div>
-                    <span className="font-bold text-yellow-500">{customer.loyaltyPoints}</span>
-                  </div>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -153,6 +146,11 @@ const CustomerDetailsModal: React.FC<CustomerDetailsModalProps> = ({ customer, s
                           
                           <div className="text-sm text-text-secondary dark:text-text-secondary-dark mb-2">
                             {sale.items.length} item{sale.items.length !== 1 ? 's' : ''} • {sale.paymentMethod.toUpperCase()}
+                            {sale.paymentMethod === 'cash' && sale.cashReceived && sale.changeGiven !== undefined && (
+                              <span className="ml-2 text-green-600 dark:text-green-400">
+                                • Cash: ₹{sale.cashReceived.toFixed(2)} (Change: ₹{sale.changeGiven.toFixed(2)})
+                              </span>
+                            )}
                           </div>
                           
                           <div className="space-y-1">
