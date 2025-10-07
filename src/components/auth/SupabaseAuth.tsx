@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Store, CheckCircle, Loader2, Mail, Lock } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../../lib/supabaseAuth';
+import EmailConfirmationModal from '../EmailConfirmationModal';
 
 interface SupabaseAuthProps {
   onAuthSuccess?: () => void;
@@ -13,6 +14,9 @@ const SupabaseAuth: React.FC<SupabaseAuthProps> = ({ onAuthSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -40,14 +44,27 @@ const SupabaseAuth: React.FC<SupabaseAuthProps> = ({ onAuthSuccess }) => {
     setError('');
     
     try {
-      const result = isSignUp 
-        ? await signUpWithEmail(email, password)
-        : await signInWithEmail(email, password);
+      if (isSignUp) {
+        const result = await signUpWithEmail(email, password);
         
-      if (result.success) {
-        onAuthSuccess?.();
+        if (result.success) {
+          // Show email confirmation modal for signup
+          setSignupEmail(email);
+          setShowEmailConfirmation(true);
+          setSignupSuccess(true);
+          setEmail('');
+          setPassword('');
+        } else {
+          setError(result.error || 'Sign up failed');
+        }
       } else {
-        setError(result.error || 'Authentication failed');
+        const result = await signInWithEmail(email, password);
+        
+        if (result.success) {
+          onAuthSuccess?.();
+        } else {
+          setError(result.error || 'Sign in failed');
+        }
       }
     } catch (error) {
       console.error('Email auth error:', error);
@@ -55,6 +72,14 @@ const SupabaseAuth: React.FC<SupabaseAuthProps> = ({ onAuthSuccess }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleToggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setError('');
+    setSignupSuccess(false);
+    setEmail('');
+    setPassword('');
   };
 
   return (
@@ -122,7 +147,7 @@ const SupabaseAuth: React.FC<SupabaseAuthProps> = ({ onAuthSuccess }) => {
       {/* Toggle between Sign In and Sign Up */}
       <div className="text-center">
         <button
-          onClick={() => setIsSignUp(!isSignUp)}
+          onClick={handleToggleMode}
           className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-200 text-sm font-medium"
         >
           {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
@@ -208,6 +233,13 @@ const SupabaseAuth: React.FC<SupabaseAuthProps> = ({ onAuthSuccess }) => {
           </div>
         </div>
       </div>
+
+      {/* Email Confirmation Modal */}
+      <EmailConfirmationModal
+        isOpen={showEmailConfirmation}
+        onClose={() => setShowEmailConfirmation(false)}
+        email={signupEmail}
+      />
     </div>
   );
 };
